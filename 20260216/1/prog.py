@@ -45,6 +45,6 @@ def last_comm(path, name_br):
 path = sys.argv[1]
 if len(sys.argv) == 2:
     print(names_br(path))
-    exit
-name_br = sys.argv[2]
-last_comm(path, name_br)
+elif len(sys.argv) == 3:
+    name_br = sys.argv[2]
+    last_comm(path, name_br)
