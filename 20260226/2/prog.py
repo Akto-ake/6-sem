@@ -36,7 +36,8 @@ def addmon(name, x, y, word, mass):
 
 def encounter(x,y, tup):
     word, name = tup
-    cowsay.cow(word)
+    cowsay(word, cow=name)
+    # cowsay.cow(word)
 
 # поле 10 на 10
 field = [[0] * 10 for _ in range(10)]
