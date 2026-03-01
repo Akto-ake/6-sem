@@ -25,7 +25,7 @@ def left(x, y):
 
 
 def addmon(name, x, y, word, mass):
-    if name not in cowsay.list_cows():
+    if name not in cowsay.char_names:
         print("Cannot add unknown monster")
         return mass
     print(f"Added monster {name} to ({x}, {y}) saying {word}")
@@ -36,7 +36,7 @@ def addmon(name, x, y, word, mass):
 
 def encounter(x,y, tup):
     word, name = tup
-    cowsay(word, cow=name)
+    print(cowsay.get_output_string(name, word))
     # cowsay.cow(word)
 
 # поле 10 на 10
