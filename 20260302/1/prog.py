@@ -64,7 +64,13 @@ while True:
             print("Invalid arguments")
             continue
         flag = 0
-        name, x, y, word = com[1], int(com[2]), int(com[3]), com[4]
+        # addmon <monster_name> hello <hello_string> hp <hitpoints> coords <x> <y>
+        name = com[1 + com.index('addmon')]
+        word = com[1 + com.index('hello')]
+        hitpoints = com[1 + com.index('hp')]
+        c_id = com.index('coords')
+        x, y = com[c_id + 1], com[c_id + 2]
+
         field = addmon(name, x, y, word, field)
         # print(*field)
     else:
