@@ -1,4 +1,5 @@
 import cowsay
+import shlex
 
 def up(x, y):
     x, y = x, (y-1) % 10
@@ -49,21 +50,21 @@ flag = 1
 while True:
     flag = 1
     com = input()
-    if com == 'up':
+    com = shlex.split(com)
+    if com[0] == 'up':
         x_cur, y_cur = up(x_cur, y_cur)
-    elif com == 'down':
+    elif com[0] == 'down':
         x_cur, y_cur = down(x_cur, y_cur)
-    elif com == 'left':
+    elif com[0] == 'left':
         x_cur, y_cur = left(x_cur, y_cur)
-    elif com == 'right':
+    elif com[0] == 'right':
         x_cur, y_cur = right(x_cur, y_cur)
-    elif com.startswith("addmon "):
-        com_mass = com.split()
-        if len(com_mass) != 5:
+    elif "addmon" in com:
+        if len(com) != 5:
             print("Invalid arguments")
             continue
         flag = 0
-        name, x, y, word = com_mass[1], int(com_mass[2]), int(com_mass[3]), com_mass[4]
+        name, x, y, word = com[1], int(com[2]), int(com[3]), com[4]
         field = addmon(name, x, y, word, field)
         # print(*field)
     else:
