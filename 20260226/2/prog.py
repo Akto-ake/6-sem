@@ -24,15 +24,20 @@ def left(x, y):
     return (x, y)
 
 
-def addmon(x, y, word, mass):
-    print(f"Added monster to ({x}, {y}) saying {word}")
+def addmon(name, x, y, word, mass):
+    if name not in cowsay.char_names:
+        print("Cannot add unknown monster")
+        return mass
+    print(f"Added monster {name} to ({x}, {y}) saying {word}")
     if mass[x][y] != 0:
         print(f"Replaced the old monster")
-    mass[x][y] = word
+    mass[x][y] = (word, name)
     return mass
 
-def encounter(x,y, word):
-    cowsay.cow(word)
+def encounter(x,y, tup):
+    word, name = tup
+    print(cowsay.get_output_string(name, word))
+    # cowsay.cow(word)
 
 # поле 10 на 10
 field = [[0] * 10 for _ in range(10)]
@@ -52,12 +57,12 @@ while True:
         x_cur, y_cur = right(x_cur, y_cur)
     elif com.startswith("addmon "):
         com_mass = com.split()
-        if len(com_mass) != 4:
+        if len(com_mass) != 5:
             print("Invalid arguments")
             continue
         flag = 0
-        x, y, word = int(com_mass[1]), int(com_mass[2]), com_mass[3]
-        field = addmon(x, y, word, field)
+        name, x, y, word = com_mass[1], int(com_mass[2]), int(com_mass[3]), com_mass[4]
+        field = addmon(name, x, y, word, field)
         # print(*field)
     else:
         print("Invalid command")
