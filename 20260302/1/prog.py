@@ -1,5 +1,20 @@
 import cowsay
+import io
 import shlex
+
+JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
+$the_cow = <<EOC;
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     __\\'--'//__
+         (((""`  `"")))
+EOC
+"""))
 
 def up(x, y):
     x, y = x, (y-1) % 10
@@ -26,7 +41,7 @@ def left(x, y):
 
 
 def addmon(name, x, y, word, mass):
-    if name not in cowsay.char_names:
+    if (name not in cowsay.list_cows()) and (name != "jgsbat"):
         print("Cannot add unknown monster")
         return mass
     print(f"Added monster {name} to ({x}, {y}) saying {word}")
@@ -37,7 +52,10 @@ def addmon(name, x, y, word, mass):
 
 def encounter(x,y, tup):
     word, name = tup
-    print(cowsay.get_output_string(name, word))
+    if name == "jgsbat":
+        print(cowsay.cowsay(word, cowfile=JGSBAT))
+    else:
+        print(cowsay.cowsay(word, cow=name))
     # cowsay.cow(word)
 
 # hello
