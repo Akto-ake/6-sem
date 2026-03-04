@@ -60,7 +60,7 @@ while True:
     elif com[0] == 'right':
         x_cur, y_cur = right(x_cur, y_cur)
     elif "addmon" in com:
-        if len(com) != 5:
+        if len(com) != 9:
             print("Invalid arguments")
             continue
         flag = 0
@@ -70,6 +70,7 @@ while True:
         hitpoints = com[1 + com.index('hp')]
         c_id = com.index('coords')
         x, y = com[c_id + 1], com[c_id + 2]
+        x, y = int(x), int(y)
 
         field = addmon(name, x, y, word, field)
         # print(*field)
