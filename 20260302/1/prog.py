@@ -39,6 +39,8 @@ def encounter(x,y, tup):
     print(cowsay.get_output_string(name, word))
     # cowsay.cow(word)
 
+# hello
+print('<<< Welcome to Python-MUD 0.1 >>>')
 # поле 10 на 10
 field = [[0] * 10 for _ in range(10)]
 x_cur, y_cur = 0,0
