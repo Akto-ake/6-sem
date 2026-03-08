@@ -1,4 +1,20 @@
 import cowsay
+import io
+import shlex
+
+JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
+$the_cow = <<EOC;
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     \\'--'//
+         (((""  "")))
+EOC
+"""))
 
 def up(x, y):
     x, y = x, (y-1) % 10
@@ -25,7 +41,7 @@ def left(x, y):
 
 
 def addmon(name, x, y, word, mass):
-    if name not in cowsay.char_names:
+    if (name not in cowsay.list_cows()) and (name != "jgsbat"):
         print("Cannot add unknown monster")
         return mass
     print(f"Added monster {name} to ({x}, {y}) saying {word}")
@@ -36,7 +52,10 @@ def addmon(name, x, y, word, mass):
 
 def encounter(x,y, tup):
     word, name = tup
-    print(cowsay.get_output_string(name, word))
+    if name == "jgsbat":
+        print(cowsay.cowsay(word, cowfile=JGSBAT))
+    else:
+        print(cowsay.cowsay(word, cow=name))
     # cowsay.cow(word)
 
 # поле 10 на 10
@@ -47,21 +66,28 @@ flag = 1
 while True:
     flag = 1
     com = input()
-    if com == 'up':
+    com = shlex.split(com)
+    if com[0] == 'up':
         x_cur, y_cur = up(x_cur, y_cur)
-    elif com == 'down':
+    elif com[0] == 'down':
         x_cur, y_cur = down(x_cur, y_cur)
-    elif com == 'left':
+    elif com[0] == 'left':
         x_cur, y_cur = left(x_cur, y_cur)
-    elif com == 'right':
+    elif com[0] == 'right':
         x_cur, y_cur = right(x_cur, y_cur)
-    elif com.startswith("addmon "):
-        com_mass = com.split()
-        if len(com_mass) != 5:
+    elif "addmon" in com:
+        if len(com) != 9:
             print("Invalid arguments")
             continue
         flag = 0
-        name, x, y, word = com_mass[1], int(com_mass[2]), int(com_mass[3]), com_mass[4]
+        # addmon <monster_name> hello <hello_string> hp <hitpoints> coords <x> <y>
+        name = com[1 + com.index('addmon')]
+        word = com[1 + com.index('hello')]
+        hitpoints = com[1 + com.index('hp')]
+        c_id = com.index('coords')
+        x, y = com[c_id + 1], com[c_id + 2]
+        x, y = int(x), int(y)
+
         field = addmon(name, x, y, word, field)
         # print(*field)
     else:
