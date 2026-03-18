@@ -2,6 +2,7 @@ import cmd
 import cowsay
 import io
 import shlex
+import readline
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
 $the_cow = <<EOC;
@@ -21,11 +22,6 @@ class Monster:
         self.name = name
         self.word = word
         self.hp = hp
-        self.weapon = {
-            "sword": 10,
-            "spear": 15,
-            "axe": 20,
-        }
 
     def encounter(self):
         if self.name == "jgsbat":
@@ -37,6 +33,11 @@ class Player:
     def __init__(self):
         self.x = 0
         self.y = 0
+        self.weapon = {
+            "sword": 10,
+            "spear": 15,
+            "axe": 20,
+        }
 
     def move(self, x1, y1):
         self.x = (self.x + x1) % 10
@@ -49,7 +50,7 @@ class Game:
         self.field = [[None] * 10 for _ in range(10)]
         self.player = Player()
 
-    def move_player(self, dx, dy):
+    def _move(self, dx, dy):
         x, y = self.player.move(dx, dy)
         output = [f"Moved to ({x}, {y})"]
 
@@ -79,14 +80,15 @@ class Game:
         monster = self.field[x][y]
 
         if not monster or monster.name != name:
-            return f"No {monster.name} here"
+            return f"No {name} here"
         # Атака наносит урон монстру в 10 очков здоровья, если у монстра не менее 10 о.з., в противном случае урон равен количеству о.з. монстра
-        damage = self.player.weapon[weapon]
-        monster.hp -= min(monster.hp, damage)
-        output = [f"Attacked {monster.name},  damage {min(monster.hp, damage)} hp"]
+        damage =  min(monster.hp, self.player.weapon[weapon])
+        monster.hp -= damage
+        output = [f"Attacked {monster.name},  damage {damage} hp"]
         
         if not monster.hp:
             output.append(f"{monster.name} died")
+            self.field[x][y] = None
         else:
             output.append(f"{monster.name} now has {monster.hp}")
         return "\n".join(output)
@@ -102,19 +104,19 @@ class CMD(cmd.Cmd):
 
     def do_up(self, arg):
         """up"""
-        return self._move(0, -1)
+        print(self.game._move(0, -1))
 
     def do_down(self, arg):
         """down"""
-        return self._move(0, 1)
+        print(self.game._move(0, 1))
 
     def do_left(self, arg):
         """left"""
-        return self._move(-1, 0)
+        print(self.game._move(-1, 0))
 
     def do_right(self, arg):
         """right"""
-        return self._move(1, 0)
+        print(self.game._move(1, 0))
 
     def do_addmon(self, arg):
         """
@@ -145,8 +147,8 @@ class CMD(cmd.Cmd):
             print("Invalid arguments")
             return
         name = args[0]
-        if len(args) == 2 and (args[0] == 'with'):
-            print(self.game.attack(name, args[1]))
+        if len(args) == 3 and (args[1] == 'with'):
+            print(self.game.attack(name, args[2]))
         else:
             print(self.game.attack(name))
         
@@ -155,16 +157,13 @@ class CMD(cmd.Cmd):
         output = []
         args = shlex.split(line)
 
-        if len(args) == 1 and (args[0] == "attack"):
-            output.append('with')
-
         if len(args) == 2 and (args[1] == "with"):
             for i in self.game.player.weapon:
-                if i.startwith(text):
+                if i.startswith(text):
                     output.append(i)
 
         for i in (cowsay.list_cows() + ["jgsbat"]):
-            if i.startwith(text):
+            if i.startswith(text):
                 output.append(i)
         return output
 
