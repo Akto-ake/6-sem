@@ -73,6 +73,11 @@ class Game:
 
         if not monster:
             return "No monster here"
+        # Атака наносит урон монстру в 10 очков здоровья, если у монстра не менее 10 о.з., в противном случае урон равен количеству о.з. монстра
+        monster.hp -= min(monster.hp, 10)
+        
+        return
+
 
 class CMD(cmd.Cmd):
     intro = "<<< Welcome to Python-MUD 0.1 >>>"
