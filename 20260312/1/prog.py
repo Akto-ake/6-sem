@@ -75,8 +75,13 @@ class Game:
             return "No monster here"
         # Атака наносит урон монстру в 10 очков здоровья, если у монстра не менее 10 о.з., в противном случае урон равен количеству о.з. монстра
         monster.hp -= min(monster.hp, 10)
+        output = [f"Attacked {monster.name},  damage {min(monster.hp, 10)} hp"]
         
-        return
+        if not monster.hp:
+            output.append(f"{monster.name} died")
+        else:
+            output.append(f"{monster.name} now has {monster.hp}")
+        return "\n".join(output)
 
 
 class CMD(cmd.Cmd):
