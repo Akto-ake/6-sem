@@ -16,32 +16,63 @@ $the_cow = <<EOC;
          (((""  "")))
 EOC
 """))
+class Monster:
+    def __init__(self, name, word, hp):
+        self.name = name
+        self.word = word
+        self.hp = hp
 
+    def encounter(self):
+        if self.name == "jgsbat":
+            return cowsay.cowsay(self.word, cowfile=JGSBAT)
+        return cowsay.cowsay(self.word, cow=self.name)
+
+
+class Player:
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+
+    def move(self, x1, y1):
+        self.x = (self.x + x1) % 10
+        self.y = (self.y + y1) % 10
+        return self.x, self.y
+
+
+class Game:
+    def __init__(self):
+        self.field = [[None] * 10 for _ in range(10)]
+        self.player = Player()
+
+    def move_player(self, dx, dy):
+        x, y = self.player.move(dx, dy)
+        output = [f"Moved to ({x}, {y})"]
+
+        monster = self.field[x][y]
+        if monster:
+            output.append(monster.encounter())
+
+        return "\n".join(output)
+
+    def add_monster(self, name, x, y, word, hp):
+        if (name not in cowsay.list_cows()) and (name != "jgsbat"):
+            return "Cannot add unknown monster"
+
+        output = [f"Added monster {name} to ({x}, {y}) saying {word}"]
+
+        if self.field[x][y]:
+            output.append("Replaced the old monster")
+
+        self.field[x][y] = Monster(name, word, hp)
+        return "\n".join(output)
 
 class CMD(cmd.Cmd):
     intro = "<<< Welcome to Python-MUD 0.1 >>>"
     prompt = "> "
 
     def __init__(self):
+        self.game = Game()
         super().__init__()
-        self.field = [[0] * 10 for _ in range(10)]
-        self.x_cur = 0
-        self.y_cur = 0
-
-    def _move(self, dx, dy):
-        self.x_cur = (self.x_cur + dx) % 10
-        self.y_cur = (self.y_cur + dy) % 10
-        print(f"Moved to ({self.x_cur}, {self.y_cur})")
-
-        if self.field[self.x_cur][self.y_cur] != 0:
-            self.encounter(self.field[self.x_cur][self.y_cur])
-
-    def encounter(self, monster):
-        word, name, hp = monster
-        if name == "jgsbat":
-            print(cowsay.cowsay(word, cowfile=JGSBAT))
-        else:
-            print(cowsay.cowsay(word, cow=name))
 
     def do_up(self, arg):
         """up"""
@@ -65,29 +96,20 @@ class CMD(cmd.Cmd):
         """
         com = shlex.split(arg)
 
-        if len(com) != 9:
+        if len(com) != 8:
             print("Invalid arguments")
             return
 
-        name = com[1 + com.index('addmon')]
+        name = com[0]
         word = com[1 + com.index('hello')]
         hitpoints = com[1 + com.index('hp')]
         c_id = com.index('coords')
         x, y = com[c_id + 1], com[c_id + 2]
         x, y = int(x), int(y)
 
-        if (name not in cowsay.list_cows()) and (name != "jgsbat"):
-            print("Cannot add unknown monster")
-            return
-
-        print(f"Added monster {name} to ({x}, {y}) saying {word}")
-        if self.field[x][y] != 0:
-            print("Replaced the old monster")
-
-        self.field[x][y] = (word, name, hitpoints)
+        print(self.game.add_monster(name, x, y, word, hitpoints))
 
     def do_EOF(self, arg):
-        print()
         return 1
 
 
