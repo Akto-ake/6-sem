@@ -65,6 +65,14 @@ class Game:
 
         self.field[x][y] = Monster(name, word, hp)
         return "\n".join(output)
+    
+    def attack(self):
+        x = self.player.x
+        y = self.player.y
+        monster = self.field[x][y]
+
+        if not monster:
+            return "No monster here"
 
 class CMD(cmd.Cmd):
     intro = "<<< Welcome to Python-MUD 0.1 >>>"
@@ -103,6 +111,7 @@ class CMD(cmd.Cmd):
         name = com[0]
         word = com[1 + com.index('hello')]
         hitpoints = com[1 + com.index('hp')]
+        hitpoints = int(hitpoints)
         c_id = com.index('coords')
         x, y = com[c_id + 1], com[c_id + 2]
         x, y = int(x), int(y)
