@@ -1,3 +1,4 @@
+import cmd
 import cowsay
 import io
 import shlex
@@ -15,75 +16,59 @@ $the_cow = <<EOC;
          (((""  "")))
 EOC
 """))
-import shlex
-
-def up(x, y):
-    x, y = x, (y-1) % 10
-    print(f"Moved to ({x}, {y})")
-    return (x, y)
 
 
-def down(x, y):
-    x, y = x, (y+1) % 10
-    print(f"Moved to ({x}, {y})")
-    return (x, y)
+class CMD(cmd.Cmd):
+    intro = "<<< Welcome to Python-MUD 0.1 >>>"
+    prompt = "> "
 
+    def __init__(self):
+        super().__init__()
+        self.field = [[0] * 10 for _ in range(10)]
+        self.x_cur = 0
+        self.y_cur = 0
 
-def right(x, y):
-    print(x, y, (x+1)%10, y)
-    x, y = (x+1)%10, y
-    print(f"Moved to ({x}, {y})")
-    return (x, y)
+    def _move(self, dx, dy):
+        self.x_cur = (self.x_cur + dx) % 10
+        self.y_cur = (self.y_cur + dy) % 10
+        print(f"Moved to ({self.x_cur}, {self.y_cur})")
 
-def left(x, y):
-    x, y = (x-1)%10, y
-    print(f"Moved to ({x}, {y})")
-    return (x, y)
+        if self.field[self.x_cur][self.y_cur] != 0:
+            self.encounter(self.field[self.x_cur][self.y_cur])
 
+    def encounter(self, monster):
+        word, name, hp = monster
+        if name == "jgsbat":
+            print(cowsay.cowsay(word, cowfile=JGSBAT))
+        else:
+            print(cowsay.cowsay(word, cow=name))
 
-def addmon(name, x, y, word, mass):
-    if (name not in cowsay.list_cows()) and (name != "jgsbat"):
-        print("Cannot add unknown monster")
-        return mass
-    print(f"Added monster {name} to ({x}, {y}) saying {word}")
-    if mass[x][y] != 0:
-        print(f"Replaced the old monster")
-    mass[x][y] = (word, name)
-    return mass
+    def do_up(self, arg):
+        """up"""
+        return self._move(0, -1)
 
-def encounter(x,y, tup):
-    word, name = tup
-    if name == "jgsbat":
-        print(cowsay.cowsay(word, cowfile=JGSBAT))
-    else:
-        print(cowsay.cowsay(word, cow=name))
-    # cowsay.cow(word)
+    def do_down(self, arg):
+        """down"""
+        return self._move(0, 1)
 
-# hello
-print('<<< Welcome to Python-MUD 0.1 >>>')
-# поле 10 на 10
-field = [[0] * 10 for _ in range(10)]
-x_cur, y_cur = 0,0
-flag = 1
+    def do_left(self, arg):
+        """left"""
+        return self._move(-1, 0)
 
-while True:
-    flag = 1
-    com = input()
-    com = shlex.split(com)
-    if com[0] == 'up':
-        x_cur, y_cur = up(x_cur, y_cur)
-    elif com[0] == 'down':
-        x_cur, y_cur = down(x_cur, y_cur)
-    elif com[0] == 'left':
-        x_cur, y_cur = left(x_cur, y_cur)
-    elif com[0] == 'right':
-        x_cur, y_cur = right(x_cur, y_cur)
-    elif "addmon" in com:
+    def do_right(self, arg):
+        """right"""
+        return self._move(1, 0)
+
+    def do_addmon(self, arg):
+        """
+        addmon <name> hello <some words> hp <hitpoints> coords <x> <y>
+        """
+        com = shlex.split(arg)
+
         if len(com) != 9:
             print("Invalid arguments")
-            continue
-        flag = 0
-        # addmon <monster_name> hello <hello_string> hp <hitpoints> coords <x> <y>
+            return
+
         name = com[1 + com.index('addmon')]
         word = com[1 + com.index('hello')]
         hitpoints = com[1 + com.index('hp')]
@@ -91,12 +76,20 @@ while True:
         x, y = com[c_id + 1], com[c_id + 2]
         x, y = int(x), int(y)
 
-        field = addmon(name, x, y, word, field)
-        # print(*field)
-    else:
-        print("Invalid command")
-    # print(flag, (field[x_cur][y_cur])
-    if flag and (field[x_cur][y_cur] != 0):
-        # оо.. попал
-        encounter(x_cur, y_cur, field[x_cur][y_cur])
-        break
+        if (name not in cowsay.list_cows()) and (name != "jgsbat"):
+            print("Cannot add unknown monster")
+            return
+
+        print(f"Added monster {name} to ({x}, {y}) saying {word}")
+        if self.field[x][y] != 0:
+            print("Replaced the old monster")
+
+        self.field[x][y] = (word, name, hitpoints)
+
+    def do_EOF(self, arg):
+        print()
+        return 1
+
+
+if __name__ == "__main__":
+    CMD().cmdloop()
