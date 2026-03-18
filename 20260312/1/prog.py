@@ -130,6 +130,9 @@ class CMD(cmd.Cmd):
 
     def do_EOF(self, arg):
         return 1
+    
+    def do_attack(self, arg):
+        print(self.game.attack())
 
 
 if __name__ == "__main__":
