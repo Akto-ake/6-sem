@@ -91,7 +91,6 @@ while True:
         x, y = com[c_id + 1], com[c_id + 2]
         x, y = int(x), int(y)
 
-        name, x, y, word = com[1], int(com[2]), int(com[3]), com[4]
         field = addmon(name, x, y, word, field)
         # print(*field)
     else:
