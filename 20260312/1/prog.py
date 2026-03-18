@@ -21,6 +21,11 @@ class Monster:
         self.name = name
         self.word = word
         self.hp = hp
+        self.weapon = {
+            "sword": 10,
+            "spear": 15,
+            "axe": 20,
+        }
 
     def encounter(self):
         if self.name == "jgsbat":
@@ -66,7 +71,9 @@ class Game:
         self.field[x][y] = Monster(name, word, hp)
         return "\n".join(output)
     
-    def attack(self):
+    def attack(self, weapon="sword"):
+        if weapon not in self.player.weapon:
+            return "Unknown weapon"
         x = self.player.x
         y = self.player.y
         monster = self.field[x][y]
@@ -74,8 +81,9 @@ class Game:
         if not monster:
             return "No monster here"
         # Атака наносит урон монстру в 10 очков здоровья, если у монстра не менее 10 о.з., в противном случае урон равен количеству о.з. монстра
-        monster.hp -= min(monster.hp, 10)
-        output = [f"Attacked {monster.name},  damage {min(monster.hp, 10)} hp"]
+        damage = self.player.weapon[weapon]
+        monster.hp -= min(monster.hp, damage)
+        output = [f"Attacked {monster.name},  damage {min(monster.hp, damage)} hp"]
         
         if not monster.hp:
             output.append(f"{monster.name} died")
@@ -132,7 +140,11 @@ class CMD(cmd.Cmd):
         return 1
     
     def do_attack(self, arg):
-        print(self.game.attack())
+        args = shlex.split(arg)
+        if len(args) == 2 and (args[0] == 'with'):
+            print(self.game.attack(args[1]))
+        else:
+            print(self.game.attack())
 
 
 if __name__ == "__main__":
