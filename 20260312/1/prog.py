@@ -146,6 +146,18 @@ class CMD(cmd.Cmd):
         else:
             print(self.game.attack())
 
+    def complete_attack(self, text, line, begidx, endidx):
+        output = []
+        args = shlex.split(line)
+
+        if len(args) == 1 and (args[0] == "attack"):
+            output.append('with')
+
+        if len(args) == 2 and (args[1] == "with"):
+            for i in self.game.player.weapon:
+                if i.startwith(text):
+                    output.append(i)
+        return output
 
 if __name__ == "__main__":
     CMD().cmdloop()
