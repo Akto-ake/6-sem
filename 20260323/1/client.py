@@ -126,9 +126,13 @@ class CMD(cmd.Cmd):
         self.socket.sendall(f'attack {name} {damage}\n'.encode())
 
 def msg_receiver(cmdline, sock):
-    while msg := sock.recv(1024).decode():
-        print(f"\n{msg}{cmdline.prompt}{readline.get_line_buffer()}", end="", flush=True)
-
+    buf = ""
+    while data := sock.recv(1024).decode():
+        buf += data
+        while "\0" in buf:
+            msg, buf = buf.split("\0", 1)
+            print(f"\n{msg}\n{cmdline.prompt}{readline.get_line_buffer()}", end="", flush=True)
+            
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} username [host [port]]")

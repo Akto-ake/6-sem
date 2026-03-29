@@ -92,6 +92,11 @@ class Game:
 clients = {}
 game = Game()
 
+async def send_msgs(me):
+    while True:
+        msg = await me.queue.get()
+        me.writer.write((msg + "\0").encode())
+        await me.writer.drain()
 
 async def echo_client(reader, writer):
     addr = writer.get_extra_info("peername")
@@ -111,12 +116,13 @@ async def echo_client(reader, writer):
         await writer.wait_closed()
         return
 
-    clients[name] = writer
+    me = Client(writer)
+    clients[name] = me
     game.add_player(name)
 
     print(f"Connected: {addr} as {name}")
-    writer.write(f"Hello, {name}\n".encode())
-    await writer.drain()
+    sender = asyncio.create_task(send_msgs(me))
+    await me.queue.put(f"Hello, {name}")
 
     while not reader.at_eof():
         data = await reader.readline()
@@ -151,15 +157,19 @@ async def echo_client(reader, writer):
         else:
             response = "Invalid command"
 
-        writer.write((response + "\n").encode())
-        await writer.drain()
+        await me.queue.put(response)
 
     print(f"Disconnected: {addr} as {name}")
     del clients[name]
     game.remove_player(name)
+    sender.cancel()
     writer.close()
     await writer.wait_closed()
 
+class Client:
+    def __init__(self, writer):
+        self.writer = writer
+        self.queue = asyncio.Queue()
 
 async def main():
     server = await asyncio.start_server(echo_client, "0.0.0.0", 1337)
