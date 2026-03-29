@@ -7,6 +7,19 @@ import cowsay
 import readline
 import asyncio
 
+JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
+$the_cow = <<EOC;
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     \\'--'//
+         (((""  "")))
+EOC
+"""))
 
 class Player:
     def __init__(self):
@@ -41,33 +54,40 @@ class Game:
         x, y = self.players[name].move(x1, y1)
         monster = self.field[x][y]
 
-        if not monster:
-            return shlex.join([str(x), str(y)])
-        return shlex.join([str(x), str(y), monster.name, monster.word])
+        res = f"Moved to ({x}, {y})"
+        if monster:
+            if monster.name == "jgsbat":
+                res += "\n" + cowsay.cowsay(monster.word, cowfile=JGSBAT)
+            else:
+                res += "\n" + cowsay.cowsay(monster.word, cow=monster.name)
+        return res
 
     def addmon(self, name, x, y, hp, word):
-        replaced = "False"
-        if self.field[x][y]:
-            replaced = "True"
-
+        replaced = self.field[x][y] is not None
         self.field[x][y] = Monster(name, word, hp)
-        return shlex.join([name, str(x), str(y), word, replaced])
+
+        res = f"Added monster {name} to ({x}, {y}) saying {word}"
+        if replaced:
+            res += "\nReplaced the old monster"
+        return res
 
     def attack(self, player_name, name, damage):
         player = self.players[player_name]
         monster = self.field[player.x][player.y]
 
         if not monster or monster.name != name:
-            return "False"
+            return f"No {name} here"
 
         damage_res = min(monster.hp, damage)
         monster.hp -= damage_res
 
+        res = f"Attacked {name}, damage {damage_res} hp"
         if monster.hp == 0:
             self.field[player.x][player.y] = None
-
-        return shlex.join(["True", str(damage_res), str(monster.hp)])
-
+            res += f"\n{name} died"
+        else:
+            res += f"\n{name} now has {monster.hp}"
+        return res
 
 clients = {}
 game = Game()

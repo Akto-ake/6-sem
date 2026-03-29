@@ -5,6 +5,7 @@ import socket
 import shlex
 import cowsay
 import readline
+import threading
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
 $the_cow = <<EOC;
@@ -68,24 +69,16 @@ class CMD(cmd.Cmd):
         return 1
 
     def do_up(self, arg):
-        self.socket.sendall(f"move 0 -1\n".encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        move_answer(*shlex.split(response))
+        self.socket.sendall("move 0 -1\n".encode())
 
     def do_down(self, arg):
-        self.socket.sendall(f"move 0 1\n".encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        move_answer(*shlex.split(response))
+        self.socket.sendall("move 0 1\n".encode())
 
     def do_left(self, arg):
-        self.socket.sendall(f"move -1 0\n".encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        move_answer(*shlex.split(response))
+        self.socket.sendall("move -1 0\n".encode())
 
     def do_right(self, arg):
-        self.socket.sendall(f"move 1 0\n".encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        move_answer(*shlex.split(response))
+        self.socket.sendall("move 1 0\n".encode())
 
     def do_addmon(self, arg):
         com = shlex.split(arg)
@@ -96,11 +89,9 @@ class CMD(cmd.Cmd):
 
         name = com[0]
         word = com[1 + com.index('hello')]
-        hitpoints = com[1 + com.index('hp')]
-        hitpoints = int(hitpoints)
+        hitpoints = int(com[1 + com.index('hp')])
         c_id = com.index('coords')
-        x, y = com[c_id + 1], com[c_id + 2]
-        x, y = int(x), int(y)
+        x, y = int(com[c_id + 1]), int(com[c_id + 2])
 
         if hitpoints <= 0:
             print("Invalid arguments")
@@ -111,9 +102,6 @@ class CMD(cmd.Cmd):
             return
 
         self.socket.sendall(f'addmon {name} hp {hitpoints} coords {x} {y} hello {word}\n'.encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        response = shlex.split(response)
-        addmon_answer(*response)
 
     def do_attack(self, arg):
         args = shlex.split(arg)
@@ -136,10 +124,10 @@ class CMD(cmd.Cmd):
             return
 
         self.socket.sendall(f'attack {name} {damage}\n'.encode())
-        response = self.socket.recv(1024).rstrip().decode()
-        response = shlex.split(response)
-        attack_answer(name, *response)
 
+def msg_receiver(cmdline, sock):
+    while msg := sock.recv(1024).decode():
+        print(f"\n{msg}{cmdline.prompt}{readline.get_line_buffer()}", end="", flush=True)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -153,7 +141,11 @@ if __name__ == '__main__':
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         s.sendall(f"{username}\n".encode())
-        response = s.recv(1024).rstrip().decode()
-        print(response)
+        response = s.recv(1024).decode()
+        print(response, end="")
+
         if response.startswith("Hello"):
-            CMD(s).cmdloop()
+            cmdline = CMD(s)
+            timer = threading.Thread(target=msg_receiver, args=(cmdline, s), daemon=True)
+            timer.start()
+            cmdline.cmdloop()
