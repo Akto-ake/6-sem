@@ -50,8 +50,8 @@ class Game:
     def remove_player(self, name):
         del self.players[name]
 
-    def move_player(self, name, x1, y1):
-        x, y = self.players[name].move(x1, y1)
+    def move_player(self, player_name, x1, y1):
+        x, y = self.players[player_name].move(x1, y1)
         monster = self.field[x][y]
 
         res = f"Moved to ({x}, {y})"
@@ -65,38 +65,47 @@ class Game:
     def addmon(self, name, x, y, hp, word):
         replaced = self.field[x][y] is not None
         self.field[x][y] = Monster(name, word, hp)
+        return replaced
 
-        res = f"Added monster {name} to ({x}, {y}) saying {word}"
-        if replaced:
-            res += "\nReplaced the old monster"
-        return res
-
-    def attack(self, player_name, name, damage):
+    def attack(self, player_name, monster_name, damage):
         player = self.players[player_name]
         monster = self.field[player.x][player.y]
 
-        if not monster or monster.name != name:
-            return f"No {name} here"
+        if not monster or monster.name != monster_name:
+            return False, 0, 0
 
-        damage_res = min(monster.hp, damage)
-        monster.hp -= damage_res
+        damage_done = min(monster.hp, damage)
+        monster.hp -= damage_done
+        hp_left = monster.hp
 
-        res = f"Attacked {name}, damage {damage_res} hp"
-        if monster.hp == 0:
+        if hp_left == 0:
             self.field[player.x][player.y] = None
-            res += f"\n{name} died"
-        else:
-            res += f"\n{name} now has {monster.hp}"
-        return res
+
+        return True, damage_done, hp_left
+
+
+class Client:
+    def __init__(self, writer):
+        self.writer = writer
+        self.queue = asyncio.Queue()
+
 
 clients = {}
 game = Game()
+
 
 async def send_msgs(me):
     while True:
         msg = await me.queue.get()
         me.writer.write((msg + "\0").encode())
         await me.writer.drain()
+
+
+async def broadcast(msg, skip=None):
+    for name, client in clients.items():
+        if name != skip:
+            await client.queue.put(msg)
+
 
 async def echo_client(reader, writer):
     addr = writer.get_extra_info("peername")
@@ -121,8 +130,12 @@ async def echo_client(reader, writer):
     game.add_player(name)
 
     print(f"Connected: {addr} as {name}")
+
+    writer.write(f"Hello, {name}\n".encode())
+    await writer.drain()
+
     sender = asyncio.create_task(send_msgs(me))
-    await me.queue.put(f"Hello, {name}")
+    await broadcast(f"{name} entered the MUD")
 
     while not reader.at_eof():
         data = await reader.readline()
@@ -138,38 +151,57 @@ async def echo_client(reader, writer):
         if cmd == "move":
             x1, y1 = int(args[1]), int(args[2])
             response = game.move_player(name, x1, y1)
+            await me.queue.put(response)
 
         elif cmd == "addmon":
             mon_name = args[1]
-            word = args[1 + args.index('hello')]
-            hitpoints = args[1 + args.index('hp')]
-            hitpoints = int(hitpoints)
-            c_id = args.index('coords')
-            x, y = args[c_id + 1], args[c_id + 2]
-            x, y = int(x), int(y)
+            word = args[1 + args.index("hello")]
+            hitpoints = int(args[1 + args.index("hp")])
+            c_id = args.index("coords")
+            x = int(args[c_id + 1])
+            y = int(args[c_id + 2])
 
-            response = game.addmon(mon_name, x, y, hitpoints, word)
+            replaced = game.addmon(mon_name, x, y, hitpoints, word)
+
+            response = f"{name} added monster {mon_name} with {hitpoints} hp"
+            if replaced:
+                response += "\nReplaced the old monster"
+
+            await broadcast(response)
 
         elif cmd == "attack":
-            mon_name, damage = args[1], args[2]
-            response = game.attack(name, mon_name, int(damage))
+            mon_name = args[1]
+            weapon = args[2]
+            damage = int(args[3])
+
+            ok, damage_done, hp_left = game.attack(name, mon_name, damage)
+
+            if not ok:
+                await me.queue.put(f"No {mon_name} here")
+                continue
+
+            response = (
+                f"{name} attacked {mon_name} with {weapon}, "
+                f"damage {damage_done} hp"
+            )
+            if hp_left == 0:
+                response += f"\n{mon_name} died"
+            else:
+                response += f"\n{mon_name} now has {hp_left} hp"
+
+            await broadcast(response)
 
         else:
-            response = "Invalid command"
-
-        await me.queue.put(response)
+            await me.queue.put("Invalid command")
 
     print(f"Disconnected: {addr} as {name}")
     del clients[name]
     game.remove_player(name)
+    await broadcast(f"{name} left the MUD")
     sender.cancel()
     writer.close()
     await writer.wait_closed()
 
-class Client:
-    def __init__(self, writer):
-        self.writer = writer
-        self.queue = asyncio.Queue()
 
 async def main():
     server = await asyncio.start_server(echo_client, "0.0.0.0", 1337)

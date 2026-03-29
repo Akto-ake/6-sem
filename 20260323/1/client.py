@@ -112,7 +112,8 @@ class CMD(cmd.Cmd):
         name = args[0]
 
         if len(args) == 1:
-            damage = weapons["sword"]
+            weapon = "sword"
+            damage = weapons[weapon]
         elif len(args) == 3 and args[1] == "with":
             weapon = args[2]
             if weapon not in weapons:
@@ -123,8 +124,8 @@ class CMD(cmd.Cmd):
             print("Invalid arguments")
             return
 
-        self.socket.sendall(f'attack {name} {damage}\n'.encode())
-
+        self.socket.sendall(f'attack {name} {weapon} {damage}\n'.encode())
+    
 def msg_receiver(cmdline, sock):
     buf = ""
     while data := sock.recv(1024).decode():
