@@ -66,21 +66,33 @@ class CMD(cmd.Cmd):
     def __init__(self, sock):
         self.socket = sock
         self.field_size = 10
+        self.waiting_answer = False
+        self.closing = False
+        self.last_cmd = ""
         super().__init__()
 
     def do_EOF(self, arg):
+        self.closing = True
         return 1
+    
+    def precmd(self, line):
+        self.last_cmd = line.strip()
+        return line
 
     def do_up(self, arg):
+        self.waiting_answer = True
         self.socket.sendall("move 0 -1\n".encode())
 
     def do_down(self, arg):
+        self.waiting_answer = True
         self.socket.sendall("move 0 1\n".encode())
 
     def do_left(self, arg):
+        self.waiting_answer = True
         self.socket.sendall("move -1 0\n".encode())
 
     def do_right(self, arg):
+        self.waiting_answer = True
         self.socket.sendall("move 1 0\n".encode())
 
     def do_addmon(self, arg):
@@ -104,6 +116,7 @@ class CMD(cmd.Cmd):
             print("Invalid arguments")
             return
 
+        self.waiting_answer = True
         self.socket.sendall(f'addmon {name} hp {hitpoints} coords {x} {y} hello {word}\n'.encode())
 
     def do_attack(self, arg):
@@ -126,17 +139,41 @@ class CMD(cmd.Cmd):
         else:
             print("Invalid arguments")
             return
-
+        
+        self.waiting_answer = True
         self.socket.sendall(f'attack {name} {weapon} {damage}\n'.encode())
     
 def msg_receiver(cmdline, sock):
     buf = ""
-    while data := sock.recv(1024).decode():
+
+    while not cmdline.closing:
+        data = sock.recv(1024).decode()
+        if not data:
+            break
+
         buf += data
+
         while "\0" in buf:
             msg, buf = buf.split("\0", 1)
-            print(f"\n{msg}\n{cmdline.prompt}{readline.get_line_buffer()}", end="", flush=True)
-            
+            msg = msg.rstrip("\n")
+
+            line = readline.get_line_buffer()
+
+            if cmdline.waiting_answer:
+                restore_line = ""
+                cmdline.waiting_answer = False
+            elif line.strip() == cmdline.last_cmd:
+                restore_line = ""
+            else:
+                restore_line = line
+
+            sys.stdout.write("\r\033[2K")
+            sys.stdout.write(msg)
+            sys.stdout.write("\n")
+            if not cmdline.closing:
+                sys.stdout.write(cmdline.prompt + restore_line)
+            sys.stdout.flush()
+                          
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} username [host [port]]")
