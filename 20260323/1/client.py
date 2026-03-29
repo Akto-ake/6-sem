@@ -29,7 +29,7 @@ weapons = {
 
 def move_answer(x, y, name=None, word=None):
     print(f"Moved to ({x}, {y})")
-    
+
     if name:
         if name == "jgsbat":
             print(cowsay.cowsay(word, cowfile=JGSBAT))
@@ -68,33 +68,26 @@ class CMD(cmd.Cmd):
         return 1
 
     def do_up(self, arg):
-        """up"""
         self.socket.sendall(f"move 0 -1\n".encode())
         response = self.socket.recv(1024).rstrip().decode()
         move_answer(*shlex.split(response))
 
     def do_down(self, arg):
-        """down"""
         self.socket.sendall(f"move 0 1\n".encode())
         response = self.socket.recv(1024).rstrip().decode()
         move_answer(*shlex.split(response))
 
     def do_left(self, arg):
-        """left"""
         self.socket.sendall(f"move -1 0\n".encode())
         response = self.socket.recv(1024).rstrip().decode()
         move_answer(*shlex.split(response))
 
     def do_right(self, arg):
-        """right"""
         self.socket.sendall(f"move 1 0\n".encode())
         response = self.socket.recv(1024).rstrip().decode()
         move_answer(*shlex.split(response))
 
     def do_addmon(self, arg):
-        """
-        addmon <name> hello <some words> hp <hitpoints> coords <x> <y>
-        """
         com = shlex.split(arg)
 
         if len(com) != 8:
@@ -127,7 +120,7 @@ class CMD(cmd.Cmd):
         if len(args) < 1:
             print("Invalid arguments")
             return
-        
+
         name = args[0]
 
         if len(args) == 1:
@@ -148,22 +141,19 @@ class CMD(cmd.Cmd):
         attack_answer(name, *response)
 
 
-    def complete_attack(self, text, line, begidx, endidx):
-        args = shlex.split(line[:endidx])
-        output = []
-        if len(args) == 3 and (args[1] == "with"):
-            for i in self.game.player.weapon:
-                if i.startswith(text):
-                    output.append(i)
-        if len(args) == 1:
-            for i in (cowsay.list_cows() + ["jgsbat"]):
-                if i.startswith(text):
-                    output.append(i)
-        return output
-
 if __name__ == '__main__':
-    host = "localhost" if len(sys.argv) < 2 else sys.argv[1]
-    port = 1337 if len(sys.argv) < 3 else int(sys.argv[2])
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} username [host [port]]")
+        sys.exit(1)
+
+    username = sys.argv[1]
+    host = "localhost" if len(sys.argv) < 3 else sys.argv[2]
+    port = 1337 if len(sys.argv) < 4 else int(sys.argv[3])
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
-        CMD(s).cmdloop()
+        s.sendall(f"{username}\n".encode())
+        response = s.recv(1024).rstrip().decode()
+        print(response)
+        if response.startswith("Hello"):
+            CMD(s).cmdloop()
