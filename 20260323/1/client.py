@@ -60,6 +60,9 @@ class CMD(cmd.Cmd):
     prompt = "> "
     intro = "<<< Welcome to Python-MUD 0.1 >>>"
 
+    def emptyline(self):
+        pass
+    
     def __init__(self, sock):
         self.socket = sock
         self.field_size = 10
