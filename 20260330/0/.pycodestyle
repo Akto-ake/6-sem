@@ -1,0 +1,4 @@
+[pycodestyle]
+inherit = false
+ignore=D401, D400
+
