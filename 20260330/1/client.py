@@ -73,6 +73,8 @@ class CMD(cmd.Cmd):
 
     def do_EOF(self, arg):
         self.closing = True
+        self.socket.shutdown(socket.SHUT_RDWR)
+        print() #  иначе выводил какой то доп символ
         return 1
     
     def precmd(self, line):
@@ -142,6 +144,15 @@ class CMD(cmd.Cmd):
         
         self.waiting_answer = True
         self.socket.sendall(f'attack {name} {weapon} {damage}\n'.encode())
+        
+    def do_sayall(self, arg):
+        args = shlex.split(arg)
+
+        if len(args) != 1:
+            print("Invalid arguments")
+            return
+
+        self.socket.sendall(f"sayall {shlex.quote(args[0])}\n".encode())
     
 def msg_receiver(cmdline, sock):
     buf = ""
@@ -191,6 +202,6 @@ if __name__ == '__main__':
 
         if response.startswith("Hello"):
             cmdline = CMD(s)
-            timer = threading.Thread(target=msg_receiver, args=(cmdline, s), daemon=True)
+            timer = threading.Thread(target=msg_receiver, args=(cmdline, s))
             timer.start()
             cmdline.cmdloop()
