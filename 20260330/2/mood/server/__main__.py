@@ -1,10 +1,6 @@
-import sys
-import cmd
 import io
-import socket
 import shlex
 import cowsay
-import readline
 import asyncio
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
@@ -20,6 +16,7 @@ $the_cow = <<EOC;
          (((""  "")))
 EOC
 """))
+
 
 class Player:
     '''class for each player'''
@@ -207,7 +204,7 @@ async def echo_client(reader, writer):
                 response += f"\n{mon_name} now has {hp_left} hp"
 
             await broadcast(response)
-            
+
         elif cmd == "sayall":
             msg = args[1]
             await broadcast(f"{name}: {msg}")

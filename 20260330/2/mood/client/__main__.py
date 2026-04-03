@@ -1,9 +1,7 @@
 import sys
 import cmd
-import io
 import socket
 import shlex
-import cowsay
 import readline
 import threading
 
@@ -43,7 +41,7 @@ class CMD(cmd.Cmd):
     def emptyline(self):
         '''processing an empty string'''
         pass
-    
+
     def __init__(self, sock):
         '''initialization class with commands'''
         self.socket = sock
@@ -57,9 +55,10 @@ class CMD(cmd.Cmd):
         """end of input processing"""
         self.closing = True
         self.socket.shutdown(socket.SHUT_RDWR)
-        print() #  иначе выводил какой то доп символ
+        #  иначе выводил какой то доп символ
+        print()
         return 1
-    
+
     def precmd(self, line):
         '''processing the last line when exiting'''
         self.last_cmd = line.strip()
@@ -131,10 +130,10 @@ class CMD(cmd.Cmd):
         else:
             print("Invalid arguments")
             return
-        
+
         self.waiting_answer = True
         self.socket.sendall(f'attack {name} {weapon} {damage}\n'.encode())
-        
+
     def do_sayall(self, arg):
         '''chattiiiiiiiiing'''
         args = shlex.split(arg)
@@ -144,7 +143,8 @@ class CMD(cmd.Cmd):
             return
 
         self.socket.sendall(f"sayall {shlex.quote(args[0])}\n".encode())
-    
+
+
 def msg_receiver(cmdline, sock):
     '''processing messages'''
     buf = ""
@@ -176,7 +176,8 @@ def msg_receiver(cmdline, sock):
             if not cmdline.closing:
                 sys.stdout.write(cmdline.prompt + restore_line)
             sys.stdout.flush()
-                          
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} username [host [port]]")
