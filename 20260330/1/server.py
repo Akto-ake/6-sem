@@ -190,6 +190,10 @@ async def echo_client(reader, writer):
                 response += f"\n{mon_name} now has {hp_left} hp"
 
             await broadcast(response)
+            
+        elif cmd == "sayall":
+            msg = args[1]
+            await broadcast(f"{name}: {msg}")
 
         else:
             await me.queue.put("Invalid command")
