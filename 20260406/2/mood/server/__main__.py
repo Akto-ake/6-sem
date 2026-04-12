@@ -95,7 +95,7 @@ class Game:
         :return: Text message for the player.
         """
         x, y = self.players[i].move(x1, y1)
-        monster = self.encounter[x][y]
+        monster = self.field[x][y]
 
         res = f"Moved to ({x}, {y})"
         if monster:
@@ -165,21 +165,6 @@ class Game:
             return cowsay.cowsay(monster.word, cowfile=JGSBAT)
         return cowsay.cowsay(monster.word, cow=monster.name)
     
-    def encounter(self, i):
-        """monster and player on the same place
-        
-        :str player_name: Player name.
-        :return: Text.
-        """
-        player = self.players[i]
-        monster = self.field[player.x][player.y]
-
-        if monster is None:
-            return ""
-
-        res = f"Moved to ({player.x}, {player.y})"
-        res += "\n" + self.answer_monster(monster)
-        return res
     
     def move_monster(self):
         """move random monster to random direction"""
@@ -302,74 +287,77 @@ async def echo_client(reader, writer):
     sender = asyncio.create_task(send_msgs(me))
     await broadcast(f"{name} entered the MUD")
 
-    while not reader.at_eof():
-        data = await reader.readline()
-        if not data:
-            break
+    try:
+        while not reader.at_eof():
+            data = await reader.readline()
+            if not data:
+                break
 
-        args = shlex.split(data.decode().rstrip("\n"))
-        if not args:
-            continue
-
-        cmd = args[0]
-
-        if cmd == "move":
-            x1, y1 = int(args[1]), int(args[2])
-            response = game.move_player(name, x1, y1)
-            await me.queue.put(response)
-
-        elif cmd == "addmon":
-            mon_name = args[1]
-            word = args[1 + args.index("hello")]
-            hitpoints = int(args[1 + args.index("hp")])
-            c_id = args.index("coords")
-            x = int(args[c_id + 1])
-            y = int(args[c_id + 2])
-
-            replaced = game.addmon(mon_name, x, y, hitpoints, word)
-
-            response = f"{name} added monster {mon_name} with {hitpoints} hp"
-            if replaced:
-                response += "\nReplaced the old monster"
-
-            await broadcast(response)
-
-        elif cmd == "attack":
-            mon_name = args[1]
-            weapon = args[2]
-            damage = int(args[3])
-
-            ok, damage_done, hp_left = game.attack(name, mon_name, damage)
-
-            if not ok:
-                await me.queue.put(f"No {mon_name} here")
+            args = shlex.split(data.decode().rstrip("\n"))
+            if not args:
                 continue
 
-            response = (
-                f"{name} attacked {mon_name} with {weapon}, "
-                f"damage {damage_done} hp"
-            )
-            if hp_left == 0:
-                response += f"\n{mon_name} died"
+            cmd = args[0]
+
+            if cmd == "move":
+                x1, y1 = int(args[1]), int(args[2])
+                response = game.move_player(name, x1, y1)
+                await me.queue.put(response)
+
+            elif cmd == "addmon":
+                mon_name = args[1]
+                word = args[1 + args.index("hello")]
+                hitpoints = int(args[1 + args.index("hp")])
+                c_id = args.index("coords")
+                x = int(args[c_id + 1])
+                y = int(args[c_id + 2])
+
+                replaced = game.addmon(mon_name, x, y, hitpoints, word)
+
+                response = f"{name} added monster {mon_name} with {hitpoints} hp"
+                if replaced:
+                    response += "\nReplaced the old monster"
+
+                await broadcast(response)
+
+            elif cmd == "attack":
+                mon_name = args[1]
+                weapon = args[2]
+                damage = int(args[3])
+
+                ok, damage_done, hp_left = game.attack(name, mon_name, damage)
+
+                if not ok:
+                    await me.queue.put(f"No {mon_name} here")
+                    continue
+
+                response = (
+                    f"{name} attacked {mon_name} with {weapon}, "
+                    f"damage {damage_done} hp"
+                )
+                if hp_left == 0:
+                    response += f"\n{mon_name} died"
+                else:
+                    response += f"\n{mon_name} now has {hp_left} hp"
+
+                await broadcast(response)
+
+            elif cmd == "sayall":
+                msg = args[1]
+                await broadcast(f"{name}: {msg}")
+
             else:
-                response += f"\n{mon_name} now has {hp_left} hp"
-
-            await broadcast(response)
-
-        elif cmd == "sayall":
-            msg = args[1]
-            await broadcast(f"{name}: {msg}")
-
-        else:
-            await me.queue.put("Invalid command")
-
-    print(f"Disconnected: {addr} as {name}")
-    del clients[name]
-    game.remove_player(name)
-    await broadcast(f"{name} left the MUD")
-    sender.cancel()
-    writer.close()
-    await writer.wait_closed()
+                await me.queue.put("Invalid command")
+    except ConnectionResetError:
+        pass
+    finally:
+        print(f"Disconnected: {addr} as {name}")
+        del clients[name]
+        game.remove_player(name)
+        await broadcast(f"{name} left the MUD")
+        sender.cancel()
+        writer.close()
+        await writer.wait_closed()
 
 
 async def main():

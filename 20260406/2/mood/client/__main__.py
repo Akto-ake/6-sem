@@ -4,6 +4,7 @@ import socket
 import shlex
 import readline
 import threading
+import time
 
 
 weapons = {
@@ -42,25 +43,26 @@ class CMD(cmd.Cmd):
         '''processing an empty string'''
         pass
 
-    def __init__(self, sock):
+    def __init__(self, sock, stdin=None):
         '''initialization class with commands'''
         self.socket = sock
         self.field_size = 10
         self.waiting_answer = False
         self.closing = False
         self.last_cmd = ""
-        super().__init__()
+        super().__init__(stdin=stdin)
 
     def do_EOF(self, arg):
         """end of input processing"""
-        self.closing = True
-        self.socket.shutdown(socket.SHUT_RDWR)
+        # self.closing = True
+        self.socket.shutdown(socket.SHUT_WR)
         #  иначе выводил какой то доп символ
         print()
         return 1
 
     def precmd(self, line):
         '''processing the last line when exiting'''
+        time.sleep(1)
         self.last_cmd = line.strip()
         return line
 
@@ -179,13 +181,24 @@ def msg_receiver(cmdline, sock):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} username [host [port]]")
+    args = sys.argv[1:]
+    cmd_file = None
+
+    if '--file' in args:
+        pos = args.index('--file')
+        if pos + 1 >= len(args):
+            print(f"Usage: {sys.argv[0]} username [host [port]] [--file filename]")
+            sys.exit(1)
+        cmd_file = args[pos + 1]
+        del args[pos:pos + 2]
+
+    if len(args) < 1:
+        print(f"Usage: {sys.argv[0]} username [host [port]] [--file filename]")
         sys.exit(1)
 
-    username = sys.argv[1]
-    host = "localhost" if len(sys.argv) < 3 else sys.argv[2]
-    port = 1337 if len(sys.argv) < 4 else int(sys.argv[3])
+    username = args[0]
+    host = "localhost" if len(args) < 2 else args[1]
+    port = 1337 if len(args) < 3 else int(args[2])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
@@ -194,7 +207,18 @@ if __name__ == '__main__':
         print(response, end="")
 
         if response.startswith("Hello"):
-            cmdline = CMD(s)
-            timer = threading.Thread(target=msg_receiver, args=(cmdline, s))
-            timer.start()
-            cmdline.cmdloop()
+            if cmd_file is not None:
+                with open(cmd_file) as file:
+                    cmdline = CMD(s, stdin=file)
+                    cmdline.prompt = ''
+                    cmdline.use_rawinput = False
+                    timer = threading.Thread(target=msg_receiver, args=(cmdline, s))
+                    timer.start()
+                    cmdline.cmdloop()
+                    timer.join()
+            else:
+                cmdline = CMD(s)
+                timer = threading.Thread(target=msg_receiver, args=(cmdline, s))
+                timer.start()
+                cmdline.cmdloop()
+                timer.join()
