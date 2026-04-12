@@ -1,0 +1,4 @@
+[pycodestyle]
+inherit = false
+max-line-length = 100
+ignore = E501
