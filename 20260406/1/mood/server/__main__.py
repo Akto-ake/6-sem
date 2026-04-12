@@ -95,7 +95,7 @@ class Game:
         :return: Text message for the player.
         """
         x, y = self.players[i].move(x1, y1)
-        monster = self.encounter[x][y]
+        monster = self.field[x][y]
 
         res = f"Moved to ({x}, {y})"
         if monster:
@@ -165,21 +165,6 @@ class Game:
             return cowsay.cowsay(monster.word, cowfile=JGSBAT)
         return cowsay.cowsay(monster.word, cow=monster.name)
     
-    def encounter(self, i):
-        """monster and player on the same place
-        
-        :str player_name: Player name.
-        :return: Text.
-        """
-        player = self.players[i]
-        monster = self.field[player.x][player.y]
-
-        if monster is None:
-            return ""
-
-        res = f"Moved to ({player.x}, {player.y})"
-        res += "\n" + self.answer_monster(monster)
-        return res
     
     def move_monster(self):
         """move random monster to random direction"""
