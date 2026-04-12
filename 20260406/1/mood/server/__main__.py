@@ -2,6 +2,7 @@ import io
 import shlex
 import cowsay
 import asyncio
+import random
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
 $the_cow = <<EOC;
@@ -16,6 +17,13 @@ $the_cow = <<EOC;
          (((""  "")))
 EOC
 """))
+
+DIRECTIONS = {
+    "right": (1, 0),
+    "left": (-1, 0),
+    "up": (0, -1),
+    "down": (0, 1),
+}
 
 
 class Player:
@@ -56,10 +64,10 @@ class Game:
         '''remove player from game'''
         del self.players[name]
 
-    def move_player(self, player_name, x1, y1):
+    def move_player(self, i, x1, y1):
         '''move player to x,y'''
-        x, y = self.players[player_name].move(x1, y1)
-        monster = self.field[x][y]
+        x, y = self.players[i].move(x1, y1)
+        monster = self.encounter[x][y]
 
         res = f"Moved to ({x}, {y})"
         if monster:
@@ -75,9 +83,9 @@ class Game:
         self.field[x][y] = Monster(name, word, hp)
         return replaced
 
-    def attack(self, player_name, monster_name, damage):
+    def attack(self, i, monster_name, damage):
         '''attack monster with weapon'''
-        player = self.players[player_name]
+        player = self.players[i]
         monster = self.field[player.x][player.y]
 
         if not monster or monster.name != monster_name:
@@ -91,6 +99,77 @@ class Game:
             self.field[player.x][player.y] = None
 
         return True, damage_done, hp_left
+    
+    def where_monsters(self):
+        '''all monsters with coordinates'''
+        res = []
+        for x in range(10):
+            for y in range(10):
+                monster = self.field[x][y]
+                if monster is not None:
+                    res.append((x, y, monster))
+        return res
+
+    def answer_monster(self, monster):
+        '''monster words'''
+        if monster.name == "jgsbat":
+            return cowsay.cowsay(monster.word, cowfile=JGSBAT)
+        return cowsay.cowsay(monster.word, cow=monster.name)
+    
+    def encounter(self, i):
+        '''monster and player on the same place'''
+        player = self.players[i]
+        monster = self.field[player.x][player.y]
+
+        if monster is None:
+            return ""
+
+        res = f"Moved to ({player.x}, {player.y})"
+        res += "\n" + self.answer_monster(monster)
+        return res
+    
+    def move_monster(self):
+        '''move random monster to random direction'''
+        monsters = self.where_monsters()
+        if not monsters:
+            return "", [], ""
+
+        # check avaible move
+        can_move = False
+        for x, y, _ in monsters:
+            for dx, dy in DIRECTIONS.values():
+                new_x = (x + dx) % 10
+                new_y = (y + dy) % 10
+                if self.field[new_x][new_y] is None:
+                    can_move = True
+                    break
+            if can_move:
+                break
+
+        if not can_move:
+            return "", [], ""
+
+        # now move
+        while True:
+            x, y, monster = random.choice(monsters)
+            direction, (dx, dy) = random.choice(list(DIRECTIONS.items()))
+            new_x = (x + dx) % 10
+            new_y = (y + dy) % 10
+
+            if self.field[new_x][new_y] is not None:
+                continue
+
+            self.field[x][y] = None
+            self.field[new_x][new_y] = monster
+
+            player_with_mon = []
+            for i, player in self.players.items():
+                if player.x == new_x and player.y == new_y:
+                    player_with_mon.append(i)
+
+            response = f"{monster.name} moved one cell {direction}"
+            return response, player_with_mon, self.answer_monster(monster)
+
 
 
 class Client:
@@ -118,6 +197,25 @@ async def broadcast(msg, skip=None):
     for name, client in clients.items():
         if name != skip:
             await client.queue.put(msg)
+
+
+async def wandering_monsters():
+    '''move random monsters every 30 seconds'''
+    while True:
+        await asyncio.sleep(30)
+
+        response, player_with_mon, mon_ans = game.move_monster()
+        player_msg = {}
+        for i in player_with_mon:
+            if i in game.players:
+                player = game.players[i]
+                player_msg[i] = (f"Moved to ({player.x}, {player.y})\n{mon_ans}")
+
+        if response:
+            await broadcast(response)
+            for i, msg in player_msg.items():
+                if i in clients:
+                    await clients[i].queue.put(msg)
 
 
 async def echo_client(reader, writer):
@@ -224,9 +322,13 @@ async def echo_client(reader, writer):
 async def main():
     '''main'''
     server = await asyncio.start_server(echo_client, "0.0.0.0", 1337)
-
-    async with server:
-        await server.serve_forever()
+    mover = asyncio.create_task(wandering_monsters())
+    
+    try:
+        async with server:
+            await server.serve_forever()
+    finally:
+        mover.cancel()
 
 
 if __name__ == "__main__":
