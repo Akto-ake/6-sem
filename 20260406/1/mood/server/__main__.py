@@ -1,3 +1,8 @@
+"""MUD server.
+
+for running: python3 -m mood.server
+"""
+
 import io
 import shlex
 import cowsay
@@ -27,45 +32,68 @@ DIRECTIONS = {
 
 
 class Player:
-    '''class for each player'''
+    """class for each player
+    
+    :int x: Current x coordinate.
+    :int y: Current y coordinate.
+    """
     def __init__(self):
-        '''init player'''
+        """init player"""
         self.x = 0
         self.y = 0
 
     def move(self, x1, y1):
-        '''move player to x, y '''
+        """move player to x, y 
+        
+        :int x1: Horizontal shift.
+        :int y1: Vertical shift.
+        :return: New player coordinates.
+        """
         self.x = (self.x + x1) % 10
         self.y = (self.y + y1) % 10
         return self.x, self.y
 
 
 class Monster:
-    '''class for each monster'''
+    """class for each monster"""
     def __init__(self, name, word, hp):
-        '''init monster'''
+        """init monster"""
         self.name = name
         self.word = word
         self.hp = hp
 
 
 class Game:
-    '''The interaction class of players, monsters, and so on'''
+    """The interaction class of players, monsters, and so on"""
     def __init__(self):
-        '''make field and dict of players'''
+        """make field and dict of players"""
         self.field = [[None] * 10 for _ in range(10)]
         self.players = {}
 
     def add_player(self, name):
-        '''add player to game'''
+        """add player to game
+
+        :str name: Player name.
+        :return: None
+        """
         self.players[name] = Player()
 
     def remove_player(self, name):
-        '''remove player from game'''
+        """remove player from game
+
+        :str name: Player name.
+        :return: None
+        """
         del self.players[name]
 
     def move_player(self, i, x1, y1):
-        '''move player to x,y'''
+        """move player to x,y
+
+        :str player_name: Name of the moving player.
+        :int x1: Horizontal shift.
+        :int y1: Vertical shift.
+        :return: Text message for the player.
+        """
         x, y = self.players[i].move(x1, y1)
         monster = self.encounter[x][y]
 
@@ -78,13 +106,27 @@ class Game:
         return res
 
     def addmon(self, name, x, y, hp, word):
-        '''add element of class Monster'''
+        """add element of class Monster
+        
+        :str name: Monster name.
+        :int x: Target x coordinate.
+        :int y: Target y coordinate.
+        :int hp: Monster hit points.
+        :str word: Monster greeting phrase.
+        :return: bool an old monster was replaced.
+        """
         replaced = self.field[x][y] is not None
         self.field[x][y] = Monster(name, word, hp)
         return replaced
 
     def attack(self, i, monster_name, damage):
-        '''attack monster with weapon'''
+        """attack monster with weapon
+        
+        :str player_name: Attacking name.
+        :str name: Monster name.
+        :str damage: Weapon damage.
+        :return: bool if was atteck, left hp
+        """
         player = self.players[i]
         monster = self.field[player.x][player.y]
 
@@ -101,7 +143,10 @@ class Game:
         return True, damage_done, hp_left
     
     def where_monsters(self):
-        '''all monsters with coordinates'''
+        """all monsters with coordinates
+        
+        :return: mass with all monsters on field
+        """
         res = []
         for x in range(10):
             for y in range(10):
@@ -111,13 +156,21 @@ class Game:
         return res
 
     def answer_monster(self, monster):
-        '''monster words'''
+        """monster words
+        
+        :str monster: Monster name.
+        :return: Monster phrase.
+        """
         if monster.name == "jgsbat":
             return cowsay.cowsay(monster.word, cowfile=JGSBAT)
         return cowsay.cowsay(monster.word, cow=monster.name)
     
     def encounter(self, i):
-        '''monster and player on the same place'''
+        """monster and player on the same place
+        
+        :str player_name: Player name.
+        :return: Text.
+        """
         player = self.players[i]
         monster = self.field[player.x][player.y]
 
@@ -129,7 +182,7 @@ class Game:
         return res
     
     def move_monster(self):
-        '''move random monster to random direction'''
+        """move random monster to random direction"""
         monsters = self.where_monsters()
         if not monsters:
             return "", [], ""
@@ -173,9 +226,9 @@ class Game:
 
 
 class Client:
-    '''class of player'''
+    """class of player"""
     def __init__(self, writer):
-        '''init player'''
+        """init player"""
         self.writer = writer
         self.queue = asyncio.Queue()
 
@@ -185,7 +238,7 @@ game = Game()
 
 
 async def send_msgs(me):
-    '''send messages from client'''
+    """send messages from client"""
     while True:
         msg = await me.queue.get()
         me.writer.write((msg + "\0").encode())
@@ -193,14 +246,14 @@ async def send_msgs(me):
 
 
 async def broadcast(msg, skip=None):
-    '''sending messages to everyone'''
+    """sending messages to everyone"""
     for name, client in clients.items():
         if name != skip:
             await client.queue.put(msg)
 
 
 async def wandering_monsters():
-    '''move random monsters every 30 seconds'''
+    """move random monsters every 30 seconds"""
     while True:
         await asyncio.sleep(30)
 
@@ -219,7 +272,7 @@ async def wandering_monsters():
 
 
 async def echo_client(reader, writer):
-    '''connecting the client'''
+    """connecting the client"""
     addr = writer.get_extra_info("peername")
 
     data = await reader.readline()
@@ -320,7 +373,7 @@ async def echo_client(reader, writer):
 
 
 async def main():
-    '''main'''
+    """main"""
     server = await asyncio.start_server(echo_client, "0.0.0.0", 1337)
     mover = asyncio.create_task(wandering_monsters())
     
