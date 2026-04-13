@@ -145,6 +145,20 @@ class CMD(cmd.Cmd):
             return
 
         self.socket.sendall(f"sayall {shlex.quote(args[0])}\n".encode())
+ 
+    def do_movemonsters(self, arg):
+        args = shlex.split(arg)
+
+        if len(args) != 1:
+            print("Invalid arguments")
+            return
+
+        if args[0] not in ("on", "off"):
+            print("Invalid arguments")
+            return
+
+        self.waiting_answer = True
+        self.socket.sendall(f"movemonsters {args[0]}\n".encode())
 
 
 def msg_receiver(cmdline, sock):

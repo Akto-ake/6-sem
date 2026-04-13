@@ -30,6 +30,7 @@ DIRECTIONS = {
     "down": (0, 1),
 }
 
+flag_monster_wandering = True
 
 class Player:
     """class for each player
@@ -242,6 +243,9 @@ async def wandering_monsters():
     while True:
         await asyncio.sleep(30)
 
+        if not flag_monster_wandering:
+            continue
+
         response, player_with_mon, mon_ans = game.move_monster()
         player_msg = {}
         for i in player_with_mon:
@@ -345,6 +349,20 @@ async def echo_client(reader, writer):
             elif cmd == "sayall":
                 msg = args[1]
                 await broadcast(f"{name}: {msg}")
+
+            elif cmd == "movemonsters":
+                global flag_monster_wandering
+
+                if len(args) != 2:
+                    await me.queue.put("Invalid arguments")
+                    continue
+
+                if args[1] not in ("on", "off"):
+                    await me.queue.put("Invalid arguments")
+                    continue
+
+                flag_monster_wandering = (args[1] == "on")
+                await me.queue.put(f"Moving monsters: {args[1]}")
 
             else:
                 await me.queue.put("Invalid command")
