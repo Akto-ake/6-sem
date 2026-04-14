@@ -160,6 +160,15 @@ class CMD(cmd.Cmd):
         self.waiting_answer = True
         self.socket.sendall(f"movemonsters {args[0]}\n".encode())
 
+    def do_locale(self, arg):
+        args = shlex.split(arg)
+
+        if len(args) != 1:
+            print("Invalid arguments")
+            return
+
+        self.waiting_answer = True
+        self.socket.sendall(f"locale {args[0]}\n".encode())
 
 def msg_receiver(cmdline, sock):
     '''processing messages'''
