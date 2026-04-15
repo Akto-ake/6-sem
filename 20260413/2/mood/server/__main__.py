@@ -8,6 +8,9 @@ import shlex
 import cowsay
 import asyncio
 import random
+import os
+import gettext
+import locale
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
 $the_cow = <<EOC;
@@ -171,7 +174,7 @@ class Game:
         """move random monster to random direction"""
         monsters = self.where_monsters()
         if not monsters:
-            return "", [], ""
+            return "", [], "", ""
 
         # check avaible move
         can_move = False
@@ -186,7 +189,7 @@ class Game:
                 break
 
         if not can_move:
-            return "", [], ""
+            return "", [], "", ""
 
         # now move
         while True:
@@ -206,8 +209,7 @@ class Game:
                 if player.x == new_x and player.y == new_y:
                     player_with_mon.append(i)
 
-            response = f"{monster.name} moved one cell {direction}"
-            return response, player_with_mon, self.answer_monster(monster)
+            return monster.name, direction, player_with_mon, self.answer_monster(monster)
 
 
 
@@ -217,11 +219,25 @@ class Client:
         """init player"""
         self.writer = writer
         self.queue = asyncio.Queue()
+        self.locale = "C.UTF-8"
 
 
 clients = {}
 game = Game()
 
+
+def get_trans(locale_name):
+    """create traslation for single and plural"""
+    if locale_name == "ru_RU.UTF8":
+        translation = gettext.translation("mud", "po", ["ru"], fallback=True)
+    else:
+        translation = gettext.NullTranslations()
+    return translation.gettext, translation.ngettext
+
+def hp_translate(locale_name, n):
+    """return translate for hp"""
+    _, ngettext = get_trans(locale_name)
+    return ngettext("{} hit point", "{} hit points", n).format(n)
 
 async def send_msgs(me):
     """send messages from client"""
@@ -231,33 +247,41 @@ async def send_msgs(me):
         await me.writer.drain()
 
 
-async def broadcast(msg, skip=None):
+async def broadcast(msg, skip=None, *arg):
     """sending messages to everyone"""
     for name, client in clients.items():
         if name != skip:
-            await client.queue.put(msg)
+            _, ngettext = get_trans(client.locale)
+            await client.queue.put(_(msg).format(*arg))
 
 
 async def wandering_monsters():
     """move random monsters every 30 seconds"""
     while True:
         await asyncio.sleep(30)
+        if flag_monster_wandering:
+            monster_name, direction, player_with_mon, mon_ans = game.move_monster()
+            player_msg = {}
+            for i in player_with_mon:
+                if i in game.players:
+                    player = game.players[i]
+                    player_msg[i] = f"Moved to ({player.x}, {player.y})\n{mon_ans}"
 
-        if not flag_monster_wandering:
-            continue
+            if monster_name:
+                for client_name, client in clients.items():
+                    _, ngettext = get_trans(client.locale)
+                    if direction == "left":
+                        await client.queue.put(_("{} moved one cell left").format(monster_name))
+                    elif direction == "right":
+                        await client.queue.put(_("{} moved one cell right").format(monster_name))
+                    elif direction == "up":
+                        await client.queue.put(_("{} moved one cell up").format(monster_name))
+                    elif direction == "down":
+                        await client.queue.put(_("{} moved one cell down").format(monster_name))
 
-        response, player_with_mon, mon_ans = game.move_monster()
-        player_msg = {}
-        for i in player_with_mon:
-            if i in game.players:
-                player = game.players[i]
-                player_msg[i] = (f"Moved to ({player.x}, {player.y})\n{mon_ans}")
-
-        if response:
-            await broadcast(response)
-            for i, msg in player_msg.items():
-                if i in clients:
-                    await clients[i].queue.put(msg)
+                for i, msg in player_msg.items():
+                    if i in clients:
+                        await clients[i].queue.put(msg)
 
 
 async def echo_client(reader, writer):
@@ -289,7 +313,7 @@ async def echo_client(reader, writer):
     await writer.drain()
 
     sender = asyncio.create_task(send_msgs(me))
-    await broadcast(f"{name} entered the MUD")
+    await broadcast("{} entered the MUD", None, name)
 
     try:
         while not reader.at_eof():
@@ -318,11 +342,18 @@ async def echo_client(reader, writer):
 
                 replaced = game.addmon(mon_name, x, y, hitpoints, word)
 
-                response = f"{name} added monster {mon_name} with {hitpoints} hp"
-                if replaced:
-                    response += "\nReplaced the old monster"
+                for client_name, client in clients.items():
+                    _, ngettext = get_trans(client.locale)
 
-                await broadcast(response)
+                    response = _("{} added monster {} with {}").format(
+                        name,
+                        mon_name,
+                        hp_translate(client.locale, hitpoints)
+                    )
+                    if replaced:
+                        response += "\n" + _("Replaced the old monster")
+
+                    await client.queue.put(response)
 
             elif cmd == "attack":
                 mon_name = args[1]
@@ -332,19 +363,31 @@ async def echo_client(reader, writer):
                 ok, damage_done, hp_left = game.attack(name, mon_name, damage)
 
                 if not ok:
-                    await me.queue.put(f"No {mon_name} here")
+                    _, ngettext = get_trans(me.locale)
+                    await me.queue.put(_("No {} here").format(mon_name))
                     continue
 
-                response = (
-                    f"{name} attacked {mon_name} with {weapon}, "
-                    f"damage {damage_done} hp"
-                )
-                if hp_left == 0:
-                    response += f"\n{mon_name} died"
-                else:
-                    response += f"\n{mon_name} now has {hp_left} hp"
+                for client_name, client in clients.items():
+                    _, ngettext = get_trans(client.locale)
 
-                await broadcast(response)
+                    response = _(
+                        "{} attacked {} with {}, damage {}"
+                    ).format(
+                        name,
+                        mon_name,
+                        weapon,
+                        hp_translate(client.locale, damage_done)
+                    )
+
+                    if hp_left == 0:
+                        response += "\n" + _("{} died").format(mon_name)
+                    else:
+                        response += "\n" + _("{} now has {}").format(
+                            mon_name,
+                            hp_translate(client.locale, hp_left)
+                        )
+
+                    await client.queue.put(response)
 
             elif cmd == "sayall":
                 msg = args[1]
@@ -362,7 +405,14 @@ async def echo_client(reader, writer):
                     continue
 
                 flag_monster_wandering = (args[1] == "on")
-                await me.queue.put(f"Moving monsters: {args[1]}")
+                _, ngettext = get_trans(me.locale)
+                await me.queue.put(_("Moving monsters: {}").format(args[1]))
+            
+            elif cmd == "locale":
+                loc = args[1]
+                me.locale = loc
+                _, ngettext = get_trans(me.locale)
+                await me.queue.put(_("Set up locale: {}").format(loc))
 
             else:
                 await me.queue.put("Invalid command")
@@ -372,7 +422,7 @@ async def echo_client(reader, writer):
         print(f"Disconnected: {addr} as {name}")
         del clients[name]
         game.remove_player(name)
-        await broadcast(f"{name} left the MUD")
+        await broadcast("{} left the MUD", None, name)
         sender.cancel()
         writer.close()
         await writer.wait_closed()
