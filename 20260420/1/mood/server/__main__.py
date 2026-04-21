@@ -428,11 +428,9 @@ async def echo_client(reader, writer):
         await writer.wait_closed()
 
 
-async def main():
-    """main"""
-    server = await asyncio.start_server(echo_client, "0.0.0.0", 1337)
+async def main(host="127.0.0.1", port=1337):
+    server = await asyncio.start_server(echo_client, host, port)
     mover = asyncio.create_task(wandering_monsters())
-    
     try:
         async with server:
             await server.serve_forever()
@@ -440,5 +438,9 @@ async def main():
         mover.cancel()
 
 
+def run_server(host="127.0.0.1", port=1337):
+    asyncio.run(main(host, port))
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    run_server()
