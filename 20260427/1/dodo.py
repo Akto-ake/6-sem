@@ -12,7 +12,7 @@ def task_pot():
         "file_dep": list(Path("mood").glob("**/*.py")),
         "actions": ["python3 -m babel.messages.frontend extract -o mud.pot mood"],
         "targets": ["mud.pot"],
-        "clean": [clean_targets.doit.task],
+        "clean": [clean_targets],
     }
 
 
