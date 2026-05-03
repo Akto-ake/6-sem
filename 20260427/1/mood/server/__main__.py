@@ -34,6 +34,9 @@ DIRECTIONS = {
 }
 
 flag_monster_wandering = True
+PLAYER_ENTERED = gettext.gettext("{} entered the MUD")
+PLAYER_LEFT = gettext.gettext("{} left the MUD")
+
 
 class Player:
     """class for each player
@@ -313,7 +316,7 @@ async def echo_client(reader, writer):
     await writer.drain()
 
     sender = asyncio.create_task(send_msgs(me))
-    await broadcast("{} entered the MUD", None, name)
+    await broadcast(PLAYER_ENTERED, None, name)
 
     try:
         while not reader.at_eof():
@@ -422,7 +425,7 @@ async def echo_client(reader, writer):
         print(f"Disconnected: {addr} as {name}")
         del clients[name]
         game.remove_player(name)
-        await broadcast("{} left the MUD", None, name)
+        await broadcast(PLAYER_LEFT, None, name)
         sender.cancel()
         writer.close()
         await writer.wait_closed()

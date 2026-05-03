@@ -3,3 +3,6 @@ __pycache__/
 Pipfile
 doc/_build/
 _build/
+.doit.db
+.i18n
+.test
