@@ -3,6 +3,7 @@ name="wordcount"
 description="Words Counter"
 version="0.0.1"
 readme="README.md"
+scripts={wordcount = "wordcount:main"}
 
 [build-system]
 requires = ["setuptools"]
