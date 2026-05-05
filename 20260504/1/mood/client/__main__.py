@@ -5,6 +5,8 @@ import shlex
 import readline
 import threading
 import time
+import webbrowser
+from pathlib import Path
 
 
 weapons = {
@@ -12,6 +14,8 @@ weapons = {
     "spear": 15,
     "axe": 20,
 }
+
+PATH = Path(__file__).resolve().parents[2] / "doc" / "_build" / "html" / "index.html"
 
 
 def addmon_answer(name, x, y, word, replace):
@@ -169,6 +173,21 @@ class CMD(cmd.Cmd):
 
         self.waiting_answer = True
         self.socket.sendall(f"locale {args[0]}\n".encode())
+
+    def do_documentation(self, arg):
+        """open generated documentation in a browser"""
+        args = shlex.split(arg)
+
+        if args:
+            print("Invalid arguments")
+            return
+
+        if not PATH.exists():
+            print("Documentation is not built. Run `doit html` first.")
+            return
+
+        webbrowser.open(PATH.as_uri())
+
 
 def msg_receiver(cmdline, sock):
     '''processing messages'''

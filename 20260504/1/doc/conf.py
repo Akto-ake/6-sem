@@ -17,6 +17,8 @@ extensions = [
     'sphinx.ext.autodoc'
 ]
 
+autodoc_mock_imports = ['cowsay']
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
