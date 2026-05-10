@@ -222,8 +222,11 @@ def msg_receiver(cmdline, sock):
             sys.stdout.flush()
 
 
-if __name__ == '__main__':
-    args = sys.argv[1:]
+def main(args=None):
+    """Console entry point for the client."""
+    if args is None:
+        args = sys.argv[1:]
+
     cmd_file = None
 
     if '--file' in args:
@@ -264,3 +267,7 @@ if __name__ == '__main__':
                 timer.start()
                 cmdline.cmdloop()
                 timer.join()
+
+
+if __name__ == '__main__':
+    main()

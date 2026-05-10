@@ -1,0 +1,24 @@
+[project]
+name = "mood"
+description = "Python-MUD client and server"
+version = "0.0.1"
+dependencies = [
+    "python-cowsay",
+]
+
+[project.scripts]
+mood-server = "mood.server.__main__:run_server"
+mood-client = "mood.client.__main__:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["mood*"]
+
+[tool.setuptools.package-data]
+mood = [
+    "po/*/LC_MESSAGES/*.mo",
+    "doc/html/**/*",
+]

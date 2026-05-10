@@ -11,6 +11,11 @@ import random
 import os
 import gettext
 import locale
+from pathlib import Path
+
+PATH = Path(__file__).resolve().parents[1]
+PATHPO = PATH / "po"
+
 
 JGSBAT = cowsay.read_dot_cow(io.StringIO(r"""
 $the_cow = <<EOC;
@@ -231,8 +236,13 @@ game = Game()
 
 def get_trans(locale_name):
     """create traslation for single and plural"""
-    if locale_name == "ru_RU.UTF8":
-        translation = gettext.translation("mud", "po", ["ru"], fallback=True)
+    if locale_name in ("ru", "ru_RU", "ru_RU.UTF8", "ru_RU.UTF-8"):
+        translation = gettext.translation(
+            "mud",
+            PATHPO,
+            ["ru_RU.UTF-8"],
+            fallback=True,
+        )
     else:
         translation = gettext.NullTranslations()
     return translation.gettext, translation.ngettext

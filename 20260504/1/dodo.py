@@ -35,10 +35,12 @@ def task_mo():
     return {
         "file_dep": ["po/ru_RU.UTF-8/LC_MESSAGES/mud.po"],
         "actions": [
+            "mkdir -p mood/po/ru_RU.UTF-8/LC_MESSAGES",
             "python3 -m babel.messages.frontend compile "
-            "-D mud -d po -l ru_RU.UTF-8",
+            "-D mud -i po/ru_RU.UTF-8/LC_MESSAGES/mud.po "
+            "-o mood/po/ru_RU.UTF-8/LC_MESSAGES/mud.mo",
         ],
-        "targets": ["po/ru_RU.UTF-8/LC_MESSAGES/mud.mo"],
+        "targets": ["mood/po/ru_RU.UTF-8/LC_MESSAGES/mud.mo"],
         "task_dep": ["po"],
         "clean": [clean_targets],
     }
@@ -58,17 +60,17 @@ def task_html():
     """Build html"""
     rstpy = list(Path("doc").glob("**/*.rst")) + list(Path("mood").glob("**/*.py")) + [Path("doc/conf.py")]
     return {
-        "actions": ["sphinx-build -M html doc doc/_build"],
-        "targets": ["doc/_build/html/index.html"],
+        "actions": ["sphinx-build -M html doc mood/doc"],
+        "targets": ["mood/doc/html/index.html"],
         "file_dep": rstpy,
-        "clean": [(shutil.rmtree, ["doc/_build"], {"ignore_errors": True})],
+        "clean": [(shutil.rmtree, ["mood/doc"], {"ignore_errors": True})],
     }
 
 
 def task_test():
     """Run tests"""
     return {
-        "file_dep": ["po/ru_RU.UTF-8/LC_MESSAGES/mud.mo", "test_server.py"],
+        "file_dep": ["mood/po/ru_RU.UTF-8/LC_MESSAGES/mud.mo", "test_server.py"],
         "actions": ["python3 -m unittest test_server.py", "touch .test"],
         "targets": [".test"],
         "task_dep": ["i18n"],
