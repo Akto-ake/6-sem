@@ -1,0 +1,5 @@
+movemonsters off
+addmon dragon hello hi hp 25 coords 0 1
+down
+attack dragon with axe
+attack dragon with axe
